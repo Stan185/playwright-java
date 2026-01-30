@@ -37,12 +37,24 @@ import java.util.zip.ZipInputStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class Utils {
-  public static int nextFreePort() {
-    try (ServerSocket socket = new ServerSocket(0)) {
-      return socket.getLocalPort();
-    } catch (IOException e) {
-      throw new RuntimeException("Cannot find free port", e);
+  private static final AtomicInteger nextUnusedPort = new AtomicInteger(9000);
+
+  private static boolean available(int port) {
+    try (ServerSocket ignored = new ServerSocket(port)) {
+      return true;
+    } catch (IOException ignored) {
+      return false;
     }
+  }
+
+  public static int nextFreePort() {
+    for (int i = 0; i < 100; i++) {
+      int port = nextUnusedPort.getAndIncrement();
+      if (available(port)) {
+        return port;
+      }
+    }
+    throw new RuntimeException("Cannot find free port: " + nextUnusedPort.get());
   }
 
   static void assertJsonEquals(Object expected, Object actual) {
